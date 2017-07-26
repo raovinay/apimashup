@@ -3,6 +3,7 @@ package com.workday.test.actor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import com.jayway.jsonpath.JsonPath;
+import com.workday.test.EncryptUtils;
 import com.workday.test.model.GithubData;
 import com.workday.test.model.MashedData;
 import com.workday.test.model.TwitterData;
@@ -56,7 +57,10 @@ public class TwitterActor extends SimpleAbstractActor{
         //reset on restart.
         RATE_LIMIT=10;
         //create twitter bearer token.
-        TWITTER_BEARER_TOKEN = twitterService.getBearerToken(prop.getProperty("twitter.consumer.key"),prop.getProperty("twitter.consumer.secret"));
+        TWITTER_BEARER_TOKEN =
+                twitterService.getBearerToken(
+                        EncryptUtils.decrypt(prop.getProperty("twitter.consumer.key.encrypted")),
+                        EncryptUtils.decrypt(prop.getProperty("twitter.consumer.secret.encrypted")));
     }
 
     @Override
