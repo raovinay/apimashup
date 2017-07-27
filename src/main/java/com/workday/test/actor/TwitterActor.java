@@ -4,19 +4,18 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import com.jayway.jsonpath.JsonPath;
 import com.workday.test.EncryptUtils;
+import com.workday.test.exceptions.StopException;
 import com.workday.test.model.GithubData;
 import com.workday.test.model.MashedData;
 import com.workday.test.model.TwitterData;
-import com.workday.test.service.GitService;
 import com.workday.test.service.TwitterService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by raovinay on 23-07-2017.
@@ -25,7 +24,7 @@ import java.util.Properties;
  * The actor itself does not know who the downstream actors are, and will be configured by the supervisor.
  */
 public class TwitterActor extends SimpleAbstractActor{
-    public static final String RESOURCE_PROPERTIES = "resource.properties";
+    private static final String RESOURCE_PROPERTIES = "resource.properties";
     private static Logger LOGGER = LoggerFactory.getLogger(TwitterActor.class);
     private int RATE_LIMIT;
     private String TWITTER_BEARER_TOKEN;
@@ -59,8 +58,22 @@ public class TwitterActor extends SimpleAbstractActor{
         //create twitter bearer token.
         TWITTER_BEARER_TOKEN =
                 twitterService.getBearerToken(
-                        EncryptUtils.decrypt(prop.getProperty("twitter.consumer.key.encrypted")),
-                        EncryptUtils.decrypt(prop.getProperty("twitter.consumer.secret.encrypted")));
+                    getProperty("twitter.consumer.key"),
+                    getProperty("twitter.consumer.secret"));
+    }
+
+    private String getProperty(final String property) {
+        //if plaintext provided, get that, else get encrypted.
+        String responseString = prop.getProperty(property);
+        if(responseString==null){
+            String encryptedString = prop.getProperty(property + ".encrypted");
+            if(encryptedString==null){
+                LOGGER.error("Twitter property not specified.");
+                throw new StopException();
+            }
+            responseString=EncryptUtils.decrypt(encryptedString);
+        }
+        return responseString;
     }
 
     @Override
